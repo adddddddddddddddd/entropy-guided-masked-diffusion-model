@@ -20,14 +20,17 @@ I hope we can achieve high precision with less parameters by shaping a more pred
 #### Shannon's Entropy
 
 I understand Shannon's entropy as a mean surprise of each token in a distribution of words.
+
 $$
 H(X) = \sum_{i=1}^{n} p(x_i) \log_2 \frac{1}{p(x_i)}
 $$
+
 where $p(x_i)$ is the probability of token $x_i$. The surprise of a token is:
 
 $$
 \text{Surprise}(x_i) = \log_2 \frac{1}{p(x_i)}
 $$
+
 To predict meaningful words, I think it is interesting to predict high surprise words associated with the "absolute" distribution. The theorical one where $p(x_i)$ is the probability of saying the token $x_i$ in the selected language.
 
 Thus, the goal is to make the model understand that words are more frequent than other (because frequency is linked to probability thanks to the Strong Law of Large Numbers).
