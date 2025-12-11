@@ -13,6 +13,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import transformers
 from typing import Any
+import numpy as np
+
+
+import math
 
 from dllm.core.schedulers import BaseAlphaScheduler, LinearAlphaScheduler
 from dllm.utils.data import prepend_bos
@@ -107,6 +111,10 @@ class MDLMTrainer(transformers.Trainer):
         return_outputs: bool = False,
         **kwargs,
     ):
+        # Get frequency_dict and T from trainer attributes
+        frequency_dict = getattr(self, "frequency_dict", {})
+        T = getattr(self, "T", 1.0)
+
         assert self.processing_class.padding_side == "right"
         inputs = self._preprocess_inputs(inputs)
         input_ids, labels, attention_mask = (
@@ -115,6 +123,8 @@ class MDLMTrainer(transformers.Trainer):
             inputs.get("attention_mask", None),
         )
         b, l = input_ids.shape
+        device = input_ids.device
+
 
         # === 1. Sample diffusion timesteps ===
         # Each example draws a random timestep t ∈ [ε, 1), where ε avoids degenerate values near 0.
@@ -124,18 +134,45 @@ class MDLMTrainer(transformers.Trainer):
         )
         p_mask = 1 - self.scheduler(t).unsqueeze(1).expand(b, l)
 
-        # === 2. Apply stochastic masking ===
-        # Tokens are masked independently according to p_mask(t).
-        # Positions with label = -100 are excluded (ignored in loss).
-        masked_indices = (torch.rand((b, l), device=input_ids.device) < p_mask) & (
-            labels != -100
+        # === 2. Compute per-token surprise/proba for each sequence ===
+        freq_tensor = torch.tensor(
+            [[frequency_dict.get(int(tok.item()), 1e-8) for tok in seq] for seq in input_ids],
+            device=input_ids.device,
+            dtype=torch.float32,
         )
-        # Replace masked tokens with the special [MASK] token.
+        surprise = -torch.log2(freq_tensor + 1e-8)
+        proba = torch.exp2(-surprise / T)
+        proba = proba * (labels != -100)
+        proba_sum = proba.sum(dim=1, keepdim=True) + 1e-8
+        proba = proba / proba_sum  # Softmax over each sequence
+
+        # === 3. Parrallel sampling without replacement (vectorized) ===
+        masked_indices = torch.zeros((b, l), dtype=torch.bool, device=device)
+        
+        for i in range(b):
+            # Bernoulli for each token: how many to mask
+            eligible = (torch.rand(l, device=device) < p_mask[i]) & (labels[i] != -100)
+            n_to_mask = eligible.sum().item()
+            if n_to_mask == 0:
+                continue
+            
+            try:
+                # Draw n_to_mask indices according to the distribution proba[i], without replacement
+                sampled_indices = torch.multinomial(
+                    proba[i], 
+                    num_samples=min(n_to_mask, (proba[i] > 0).sum().item()),
+                    replacement=False
+                )
+                masked_indices[i, sampled_indices] = True
+            except RuntimeError:
+                # Fallback if multinomial fails (e.g., all probabilities are 0)
+                continue
+
         noised_input_ids = torch.where(
             masked_indices, self.processing_class.mask_token_id, input_ids
         )
 
-        # === 3. Forward pass through the model ===
+        # === 5. Forward pass through the model ===
         # The model predicts clean tokens given noised inputs.
         outputs = model(input_ids=noised_input_ids, attention_mask=attention_mask)
         outputs = self._postprocess_outputs(outputs)
