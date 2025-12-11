@@ -3,7 +3,9 @@
 
 First of all I want to thank the creators of the dLLM github repo who helped me shape my idea into something real without having to start from scratch. Huge thank you.
 
-Also I am an undergrad student in CentraleSupélec, France that is doing the work alone. This is a first version, with maybe some imprecisions. Feel free to correct me or contact me so I can cite your paper and review my statements.
+**Also** I am an **undergrad** student in CentraleSupélec, France that is doing the work alone. This is a first version, with maybe some imprecisions. Feel free to correct me or contact me so I can cite your paper and review my statements. 
+
+Contact informations at the bottom of this file. I am currently looking for an internship.
 
 ### The intuition behind the model
 
@@ -58,6 +60,74 @@ where:
 The temperature $T$ controls the distribution sharpness:
 - $T \to 0$: Greedy selection (always mask highest surprise token)
 - $T = 1$: Standard softmax (balanced exploration)
-- $T \to \infty$: Uniform selection (all tokens equally likely even if two tokens appear in the same sequence since they are different by their position, another variable we want the model to understand. e. g. we want the model to understand where the meaningful tokens lay.)
+- $T \to \infty$: Uniform selection (all tokens equally likely **Usual MDM/dLLM**)
 
 With that method, we connect a continuum of models.
+
+## Experiments
+
+That continuum should help us select the most relevant diffusion model by chosing the right parameter T.
+
+I want to train small models for differents temperatures. Then, I'll plot the loss after few batches and hope it has a minimum somewhere. After finding one or other minimums I hope I will be able to train a much larger model.
+
+Since I only have access to a T4 for the moment, I will train 10 to 20 M parameters models with 15M - 30M tokens. We are not using Chinchilla scaling law for these experiments since we just need quick updates on the impact of T.
+
+To do so, I take the LLaDA architecture and train it to achieve a 15M - 20M (to precise) guided model with these parameters:
+```
+d_model = 256
+n_layers = 4
+n_heads = 4
+vocab_size = 50K
+```
+And this truncation of the dataset :
+```
+eval_samples = 2000
+max_length = 256
+batch_size = 16
+```
+
+I'll go over multiple Ts and share the plot step by step.
+
+I prefer training from scratch rather than fine-tuning LLaDA or DREAM because these are models with $T \to \infty$ and a lot of parameters and I can't compete with my compute power.
+
+## Ideas to Explore
+If Temperature is a relevant hyperparameter :
+- Find the best Temperature setting
+- Maybe change the scheduler to train closely to $t=1$ because it needs more training to predict high surprise words.
+- Train a model with more parameters
+- Run evaluation benchmarks
+
+## Ressources
+
+⚠️ This is an active research project. Results are preliminary and under continuous development. Feedback and contributions are welcome!
+
+If you are interested in the project, please read CONTRIBUTIONS.md
+
+To see the modifications, please read MODIFICATIONS.md
+
+Thanks again to the dLLM Github team
+```
+@misc{dllm,
+    author = {Zhanhui Zhou and Lingjie Chen and Hanghang Tong and Dawn Song},
+    title = {dLLM: Simple Diffusion Language Modeling},
+    year = {2025},
+    publisher = {GitHub},
+    journal = {GitHub repository},
+    howpublished = {\url{https://github.com/ZHZisZZ/dllm}},
+}
+```
+This project inherits the MIT license from the original dLLM repository. See LICENSE for details.
+
+If you use this code or find the ideas helpful, please cite:
+```
+@misc{egmdm,
+    author = {Adrien Leveuf},
+    title = {Entropy-Guided Masked Diffusion Model},
+    year = {2025},
+    publisher = {GitHub},
+    journal = {GitHub repository},
+    howpublished = {\url{https://github.com/adddddddddddddddd/entropy-guided-masked-diffusion-model}},
+}
+```
+
+Contact : https://www.linkedin.com/in/adrien-leveuf/
