@@ -92,7 +92,24 @@ batch_size = 16
 I'll go over multiple Ts and share the plot step by step.
 
 I prefer training from scratch rather than fine-tuning LLaDA or DREAM because these are models with $T \to \infty$ and a lot of parameters and I can't compete with my compute power.
+## Installation
 
+*From dLLM repo*
+```
+# create and activate conda environment
+conda create -n dllm python=3.10 -y
+conda activate dllm
+
+# install pytorch with CUDA 12.4 (other pytorch/cuda versions should also work)
+conda install cuda=12.4 -c nvidia
+pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 \
+    --index-url https://download.pytorch.org/whl/cu124
+
+# install dllm package
+pip install -e .
+```
+
+Then go to ``` dllm/train/train_egdllm.py ``` and launch training with the hyperparameters you want.
 ## Ideas to Explore
 If Temperature is a relevant hyperparameter :
 - Find the best Temperature setting
