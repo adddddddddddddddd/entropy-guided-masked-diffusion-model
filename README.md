@@ -65,7 +65,7 @@ The temperature $T$ controls the distribution sharpness:
 - $T = 1$: Standard softmax (balanced exploration)
 - $T \to \infty$: Uniform selection (all tokens equally likely **Usual MDM/dLLM**)
 
-With that method, we connect a continuum of models.
+With that method, we connect a continuum of models. We can retrieve the originals MDM models and go up to a greedy selection. We have to tweak T in order to see where we are going and if this path is relevant.
 
 ## Experiments
 
@@ -99,6 +99,15 @@ If Temperature is a relevant hyperparameter :
 - Maybe change the scheduler to train closely to $t=1$ because it needs more training to predict high surprise words.
 - Train a model with more parameters
 - Run evaluation benchmarks
+- Use that method to link autoregressive models with MDM through a different distribution such as 
+
+$$
+p_{\text{mask}}(x_i) = \frac{\exp\left(\frac{Toke n\ position}{T}\right)}{\sum_{j=1}^{L} \exp\left(\frac{Toke n\ position}{T}\right)}
+$$
+
+It will go from AR to MDM and we can eventually evaluate new hybrid models.
+
+Also, it may exists other paths.
 
 ## Ressources
 

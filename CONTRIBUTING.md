@@ -7,6 +7,15 @@ We welcome contributions! Here's how you can help:
 - Maybe change the scheduler to train closely to $t=1$ because it needs more training to predict high surprise words.
 - Train a model with more parameters
 - Run evaluation benchmarks
+- Use that method to link autoregressive models with MDM through a different distribution such as 
+
+$$
+p_{\text{mask}}(x_i) = \frac{\exp\left(\frac{Toke n\ position}{T}\right)}{\sum_{j=1}^{L} \exp\left(\frac{Toke n\ position}{T}\right)}
+$$
+
+It will go from AR to MDM and we can eventually evaluate new hybrid models.
+
+Also, it may exists other paths.
 
 
 ## Getting Started
